@@ -1,0 +1,8 @@
+{
+  "name": "公司員工足浴預約系統",
+  "description": "企業內部員工足浴預約系統，提供即時時段席位查詢、直接與間接人員身分資格檢查、預約登記與自主使用維護流程規範。",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
