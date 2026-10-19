@@ -1,0 +1,101 @@
+{
+  "entities": {
+    "ExperienceFeedback": {
+      "title": "ExperienceFeedback",
+      "description": "Employee 30-minute footbath experience and post-use recovery feedback",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "bookingId": { "type": "string" },
+        "date": { "type": "string" },
+        "slotId": { "type": "string" },
+        "seatId": { "type": "string" },
+        "employeeName": { "type": "string" },
+        "employeeId": { "type": "string" },
+        "department": { "type": "string" },
+        "employeeType": { "type": "string" },
+        "overallRating": { "type": "number" },
+        "futureSupport": { "type": "string" },
+        "weeklyFrequency": { "type": "string" },
+        "durationSuitability": { "type": "string" },
+        "preferredTimeSlot": { "type": "string" },
+        "cleanlinessRating": { "type": "number" },
+        "drainageConvenience": { "type": "string" },
+        "suppliesSatisfaction": { "type": "number" },
+        "initialBucketCondition": { "type": "string" },
+        "fatigueReliefFeeling": { "type": "string" },
+        "workBenefit": { "type": "string" },
+        "cleanedUpAndRestored": { "type": "boolean" },
+        "improvementTags": { "type": "array" },
+        "comments": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": [
+        "id",
+        "date",
+        "slotId",
+        "employeeName",
+        "employeeId",
+        "department",
+        "employeeType",
+        "overallRating",
+        "futureSupport",
+        "weeklyFrequency",
+        "durationSuitability",
+        "preferredTimeSlot",
+        "cleanlinessRating",
+        "drainageConvenience",
+        "suppliesSatisfaction",
+        "initialBucketCondition",
+        "fatigueReliefFeeling",
+        "workBenefit",
+        "cleanedUpAndRestored",
+        "createdAt"
+      ]
+    },
+    "Booking": {
+      "title": "Booking",
+      "description": "Footbath time slot booking reservation",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "date": { "type": "string" },
+        "slotId": { "type": "string" },
+        "employeeName": { "type": "string" },
+        "employeeId": { "type": "string" },
+        "department": { "type": "string" },
+        "employeeType": { "type": "string" },
+        "attendeeCount": { "type": "number" },
+        "seats": { "type": "array" },
+        "companionNames": { "type": "array" },
+        "notes": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "status": { "type": "string" },
+        "hasFeedback": { "type": "boolean" }
+      },
+      "required": [
+        "id",
+        "date",
+        "slotId",
+        "employeeName",
+        "employeeId",
+        "department",
+        "employeeType",
+        "attendeeCount",
+        "seats",
+        "createdAt",
+        "status"
+      ]
+    }
+  },
+  "firestore": {
+    "/feedbacks/{feedbackId}": {
+      "schema": "ExperienceFeedback",
+      "description": "Collection of employee experience feedback records"
+    },
+    "/bookings/{bookingId}": {
+      "schema": "Booking",
+      "description": "Collection of employee footbath reservations"
+    }
+  }
+}

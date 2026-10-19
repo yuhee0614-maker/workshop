@@ -113,7 +113,9 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!employeeName.trim() || !employeeId.trim()) {
       setErrorMsg('請輸入同仁姓名與工號');
@@ -125,33 +127,41 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
       return;
     }
 
-    bookingManager.createFeedback({
-      bookingId: booking?.id,
-      date: date || new Date().toISOString().split('T')[0],
-      slotId: slotId || '12:00-12:30',
-      seatId: seatId || booking?.seats?.[0],
-      employeeName: employeeName.trim(),
-      employeeId: employeeId.trim().toUpperCase(),
-      department: department.trim() || '未填寫部門',
-      employeeType,
-      overallRating,
-      futureSupport,
-      weeklyFrequency,
-      durationSuitability,
-      preferredTimeSlot,
-      cleanlinessRating,
-      drainageConvenience,
-      suppliesSatisfaction,
-      initialBucketCondition,
-      fatigueReliefFeeling,
-      workBenefit,
-      cleanedUpAndRestored,
-      improvementTags: selectedTags,
-      comments: comments.trim(),
-    });
+    setIsSubmitting(true);
+    setErrorMsg('');
+    try {
+      await bookingManager.createFeedback({
+        bookingId: booking?.id,
+        date: date || new Date().toISOString().split('T')[0],
+        slotId: slotId || '12:00-12:30',
+        seatId: seatId || booking?.seats?.[0],
+        employeeName: employeeName.trim(),
+        employeeId: employeeId.trim().toUpperCase(),
+        department: department.trim() || '未填寫部門',
+        employeeType,
+        overallRating,
+        futureSupport,
+        weeklyFrequency,
+        durationSuitability,
+        preferredTimeSlot,
+        cleanlinessRating,
+        drainageConvenience,
+        suppliesSatisfaction,
+        initialBucketCondition,
+        fatigueReliefFeeling,
+        workBenefit,
+        cleanedUpAndRestored,
+        improvementTags: selectedTags,
+        comments: comments.trim(),
+      });
 
-    setSubmitted(true);
-    onFeedbackSubmitted();
+      setSubmitted(true);
+      onFeedbackSubmitted();
+    } catch {
+      setErrorMsg('傳送回饋時出現問題，請重新送出');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -670,9 +680,17 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
               </button>
               <button
                 type="submit"
-                className="px-6 py-2.5 font-bold text-white bg-teal-700 hover:bg-teal-800 rounded-lg transition-colors shadow-xs"
+                disabled={isSubmitting}
+                className="px-6 py-2.5 font-bold text-white bg-teal-700 hover:bg-teal-800 disabled:bg-neutral-400 rounded-lg transition-colors shadow-xs flex items-center gap-1.5"
               >
-                提交體驗評估回饋
+                {isSubmitting ? (
+                  <>
+                    <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    <span>即時雲端同步中...</span>
+                  </>
+                ) : (
+                  <span>提交體驗評估回饋</span>
+                )}
               </button>
             </div>
           </form>

@@ -1,4 +1,12 @@
-import { Booking, EmployeeType, ExperienceFeedback, SeatId, SeatSlotStatus, SlotStatus, TimeSlotDef } from '../types';
+import {
+  Booking,
+  EmployeeType,
+  ExperienceFeedback,
+  SeatId,
+  SeatSlotStatus,
+  SlotStatus,
+  TimeSlotDef,
+} from '../types';
 import {
   DIRECT_ONLY_PROMPT_MESSAGE,
   INITIAL_SAMPLE_BOOKINGS,
@@ -6,9 +14,19 @@ import {
   SLOT_SEAT_DEFS,
   TIME_SLOTS,
 } from '../data/constants';
+import { db } from './firebase';
+import {
+  collection,
+  doc,
+  setDoc,
+  updateDoc,
+  onSnapshot,
+  getDocs,
+} from 'firebase/firestore';
 
 const STORAGE_KEY = 'footbath_bookings_v4';
 const FEEDBACK_STORAGE_KEY = 'footbath_feedbacks_v4';
+const WEBHOOK_STORAGE_KEY = 'footbath_webhook_url';
 
 const INITIAL_SAMPLE_FEEDBACKS: ExperienceFeedback[] = [
   {
@@ -34,7 +52,8 @@ const INITIAL_SAMPLE_FEEDBACKS: ExperienceFeedback[] = [
     workBenefit: 'energy_boost',
     cleanedUpAndRestored: true,
     improvementTags: ['增加更多擦腳毛巾', '建議現場增設壁掛式時鐘'],
-    comments: '上午站產線 4 小時腳底肌肉緊繃，泡完 20 多分鐘全身放鬆很多，下午作業精神明顯變好！強烈希望正式常態設置。結束後已將水倒淨擦乾。',
+    comments:
+      '上午站產線 4 小時腳底肌肉緊繃，泡完 20 多分鐘全身放鬆很多，下午作業精神明顯變好！強烈希望正式常態設置。結束後已將水倒淨擦乾。',
     createdAt: '2026-10-15T12:35:00Z',
   },
   {
@@ -60,7 +79,8 @@ const INITIAL_SAMPLE_FEEDBACKS: ExperienceFeedback[] = [
     workBenefit: 'muscle_relax',
     cleanedUpAndRestored: true,
     improvementTags: ['增設座位靠枕', '增加置物籃置放包包'],
-    comments: '獨立足浴桶清潔度很好，自己調水溫很直覺。每週固定來 1-2 次可以大幅緩解長時間坐著辦公的下肢水腫。',
+    comments:
+      '獨立足浴桶清潔度很好，自己調水溫很直覺。每週固定來 1-2 次可以大幅緩解長時間坐著辦公的下肢水腫。',
     createdAt: '2026-10-15T14:05:00Z',
   },
   {
@@ -86,7 +106,8 @@ const INITIAL_SAMPLE_FEEDBACKS: ExperienceFeedback[] = [
     workBenefit: 'energy_boost',
     cleanedUpAndRestored: true,
     improvementTags: ['建議延長至下班時段 (17:00-18:30)', '加裝排水軟管防噴濺'],
-    comments: '久坐寫程式腿部血液循環差，泡腳非常有感。如果未來常態落地，希望能增開下班後的 17:00~18:00 時段！',
+    comments:
+      '久坐寫程式腿部血液循環差，泡腳非常有感。如果未來常態落地，希望能增開下班後的 17:00~18:00 時段！',
     createdAt: '2026-10-15T14:35:00Z',
   },
   {
@@ -112,7 +133,8 @@ const INITIAL_SAMPLE_FEEDBACKS: ExperienceFeedback[] = [
     workBenefit: 'energy_boost',
     cleanedUpAndRestored: true,
     improvementTags: ['維持直接人員專屬時段保護'],
-    comments: '15:00 這個下午中場專屬時段對現場同仁幫助極大，泡完回去站產線到下班腳都不會痠麻，絕對支持公司正式常態落地設置！',
+    comments:
+      '15:00 這個下午中場專屬時段對現場同仁幫助極大，泡完回去站產線到下班腳都不會痠麻，絕對支持公司正式常態落地設置！',
     createdAt: '2026-10-15T15:35:00Z',
   },
 ];
@@ -121,9 +143,45 @@ class BookingManager {
   private bookings: Booking[] = [];
   private feedbacks: ExperienceFeedback[] = [];
   private listeners: (() => void)[] = [];
+  private isCloudConnected: boolean = false;
+  private lastCloudSync: Date | null = null;
+  private webhookUrl: string = '';
 
   constructor() {
     this.loadFromStorage();
+    this.loadWebhookUrl();
+    this.initFirestoreSync();
+  }
+
+  private loadWebhookUrl() {
+    try {
+      this.webhookUrl = localStorage.getItem(WEBHOOK_STORAGE_KEY) || '';
+    } catch {
+      this.webhookUrl = '';
+    }
+  }
+
+  public getWebhookUrl(): string {
+    return this.webhookUrl;
+  }
+
+  public setWebhookUrl(url: string) {
+    this.webhookUrl = url.trim();
+    try {
+      localStorage.setItem(WEBHOOK_STORAGE_KEY, this.webhookUrl);
+    } catch (e) {
+      console.warn('Failed to save webhook URL to storage', e);
+    }
+    this.notifyListeners();
+  }
+
+  public getCloudStatus() {
+    return {
+      isCloudConnected: this.isCloudConnected,
+      lastSync: this.lastCloudSync ? this.lastCloudSync.toLocaleTimeString() : '已即時連線',
+      feedbackCount: this.feedbacks.length,
+      hasWebhook: !!this.webhookUrl,
+    };
   }
 
   private loadFromStorage() {
@@ -153,18 +211,102 @@ class BookingManager {
     }
   }
 
+  private initFirestoreSync() {
+    // 1. Real-time sync for Feedbacks
+    try {
+      const feedbacksCol = collection(db, 'feedbacks');
+      onSnapshot(
+        feedbacksCol,
+        (snapshot) => {
+          this.isCloudConnected = true;
+          this.lastCloudSync = new Date();
+
+          if (!snapshot.empty) {
+            const cloudFeedbacks: ExperienceFeedback[] = [];
+            snapshot.forEach((docSnap) => {
+              cloudFeedbacks.push(docSnap.data() as ExperienceFeedback);
+            });
+
+            // Merge cloud feedbacks with any local records
+            const mergedMap = new Map<string, ExperienceFeedback>();
+            // Add local/sample first
+            this.feedbacks.forEach((f) => mergedMap.set(f.id, f));
+            // Cloud items overwrite
+            cloudFeedbacks.forEach((f) => mergedMap.set(f.id, f));
+
+            this.feedbacks = Array.from(mergedMap.values()).sort(
+              (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+            );
+
+            this.saveFeedbacksToStorage();
+          } else {
+            // Seed initial feedbacks to Firestore so other devices see them
+            INITIAL_SAMPLE_FEEDBACKS.forEach((fb) => {
+              setDoc(doc(db, 'feedbacks', fb.id), fb).catch(() => {});
+            });
+          }
+          this.notifyListeners();
+        },
+        (error) => {
+          console.warn('Firestore feedback sync note:', error.message);
+        }
+      );
+    } catch (err) {
+      console.warn('Init firestore feedback listener error:', err);
+    }
+
+    // 2. Real-time sync for Bookings
+    try {
+      const bookingsCol = collection(db, 'bookings');
+      onSnapshot(
+        bookingsCol,
+        (snapshot) => {
+          this.isCloudConnected = true;
+          this.lastCloudSync = new Date();
+
+          if (!snapshot.empty) {
+            const cloudBookings: Booking[] = [];
+            snapshot.forEach((docSnap) => {
+              cloudBookings.push(docSnap.data() as Booking);
+            });
+
+            const mergedMap = new Map<string, Booking>();
+            this.bookings.forEach((b) => mergedMap.set(b.id, b));
+            cloudBookings.forEach((b) => mergedMap.set(b.id, b));
+
+            this.bookings = this.normalizeBookings(Array.from(mergedMap.values()));
+            this.saveBookingsToStorage();
+          } else {
+            // Seed sample bookings
+            INITIAL_SAMPLE_BOOKINGS.forEach((bk) => {
+              setDoc(doc(db, 'bookings', bk.id), bk).catch(() => {});
+            });
+          }
+          this.notifyListeners();
+        },
+        (error) => {
+          console.warn('Firestore booking sync note:', error.message);
+        }
+      );
+    } catch (err) {
+      console.warn('Init firestore booking listener error:', err);
+    }
+  }
+
   private normalizeBookings(list: any[]): Booking[] {
     const validSeats: SeatId[] = ['男A', '男B', '女A', '女B'];
     return list.map((b) => {
       let seats: SeatId[] = [];
       if (Array.isArray(b.seats)) {
-        seats = b.seats.map((s: string) => {
-          if (s === '1號桶') return '男A';
-          if (s === '2號桶') return '男B';
-          if (s === '3號桶') return '女A';
-          if (s === '4號桶') return '女B';
-          return s as SeatId;
-        }).filter((s: SeatId) => validSeats.includes(s));
+        seats = b.seats
+          .map((s: string) => {
+            if (s === '1號桶') return '男A';
+            if (s === '2號桶') return '男B';
+            if (s === '3號桶') return '女A';
+            if (s === '4號桶') return '女B';
+            return s as SeatId;
+          })
+          .filter((s: SeatId) => validSeats.includes(s));
       }
 
       if (seats.length === 0) {
@@ -255,153 +397,86 @@ class BookingManager {
       });
 
       const totalBooked = seats.filter((s) => s.isBooked).length;
-      const remainingCapacity = Math.max(0, MAX_CAPACITY_PER_SLOT - totalBooked);
 
       return {
         slot,
         totalBooked,
-        remainingCapacity,
-        isFull: remainingCapacity <= 0,
+        remainingCapacity: Math.max(0, MAX_CAPACITY_PER_SLOT - totalBooked),
+        isFull: totalBooked >= MAX_CAPACITY_PER_SLOT,
         seats,
         bookings: slotBookings,
       };
     });
   }
 
-  public getSlotDefinition(slotId: string): TimeSlotDef | undefined {
-    return TIME_SLOTS.find((s) => s.id === slotId);
-  }
-
   public getAvailableSeats(date: string, slotId: string): SeatSlotStatus[] {
     const slotList = this.getSlotStatusList(date);
-    const target = slotList.find((s) => s.slot.id === slotId);
-    if (!target) return [];
-    return target.seats.filter((s) => !s.isBooked);
+    const targetSlot = slotList.find((s) => s.slot.id === slotId);
+    if (!targetSlot) return [];
+    return targetSlot.seats.filter((s) => !s.isBooked);
+  }
+
+  public validateBooking(params: {
+    date: string;
+    slotId: string;
+    employeeType: EmployeeType;
+    requestedCount: number;
+    requestedSeats?: SeatId[];
+  }): { valid: boolean; reason?: string } {
+    const slotDef = TIME_SLOTS.find((s) => s.id === params.slotId);
+    if (!slotDef) {
+      return { valid: false, reason: '無效的預約時段' };
+    }
+
+    if (slotDef.isDirectOnly && params.employeeType === 'indirect') {
+      return { valid: false, reason: DIRECT_ONLY_PROMPT_MESSAGE };
+    }
+
+    const availableSeats = this.getAvailableSeats(params.date, params.slotId);
+
+    if (params.requestedSeats && params.requestedSeats.length > 0) {
+      for (const seatId of params.requestedSeats) {
+        const isFree = availableSeats.some((s) => s.seatId === seatId);
+        if (!isFree) {
+          return { valid: false, reason: `所選席位【${seatId}】已被其他同仁登記，請挑選其他席位。` };
+        }
+      }
+      return { valid: true };
+    }
+
+    if (availableSeats.length < params.requestedCount) {
+      return {
+        valid: false,
+        reason: `該時段剩餘容量不足（僅剩 ${availableSeats.length} 席，您需要 ${params.requestedCount} 席）。`,
+      };
+    }
+
+    return { valid: true };
   }
 
   public getSlotRemainingCapacity(date: string, slotId: string): number {
-    const available = this.getAvailableSeats(date, slotId);
-    return available.length;
-  }
-
-  public checkEligibility(
-    employeeType: EmployeeType,
-    slot: TimeSlotDef
-  ): { eligible: boolean; message?: string } {
-    if (slot.isDirectOnly && employeeType === 'indirect') {
-      return {
-        eligible: false,
-        message: DIRECT_ONLY_PROMPT_MESSAGE,
-      };
-    }
-    return { eligible: true };
+    const slotList = this.getSlotStatusList(date);
+    const targetSlot = slotList.find((s) => s.slot.id === slotId);
+    return targetSlot ? targetSlot.remainingCapacity : 0;
   }
 
   public getAvailableAlternativeSlots(
     date: string,
     employeeType: EmployeeType,
-    neededSpots: number = 1,
-    excludeSlotId?: string
-  ): { slot: TimeSlotDef; remaining: number; availableSeats: SeatId[] }[] {
-    const allSlots = this.getSlotStatusList(date);
-
-    return allSlots
-      .filter((item) => {
-        if (excludeSlotId && item.slot.id === excludeSlotId) return false;
-        if (item.slot.isDirectOnly && employeeType === 'indirect') return false;
-        return item.remainingCapacity >= neededSpots;
+    requiredSeats: number,
+    currentSlotId?: string
+  ): { slot: TimeSlotDef; remaining: number }[] {
+    const slotList = this.getSlotStatusList(date);
+    return slotList
+      .filter((s) => {
+        if (currentSlotId && s.slot.id === currentSlotId) return false;
+        if (s.slot.isDirectOnly && employeeType === 'indirect') return false;
+        return s.remainingCapacity >= requiredSeats;
       })
-      .map((item) => ({
-        slot: item.slot,
-        remaining: item.remainingCapacity,
-        availableSeats: item.seats.filter((s) => !s.isBooked).map((s) => s.seatId),
+      .map((s) => ({
+        slot: s.slot,
+        remaining: s.remainingCapacity,
       }));
-  }
-
-  public validateBooking(
-    date: string,
-    slotId: string,
-    employeeType: EmployeeType,
-    attendeeCount: number,
-    requestedSeats?: SeatId[]
-  ): {
-    valid: boolean;
-    reason?: string;
-    suggestedSlots?: { slot: TimeSlotDef; remaining: number; availableSeats: SeatId[] }[];
-  } {
-    const slotDef = this.getSlotDefinition(slotId);
-    if (!slotDef) {
-      return { valid: false, reason: '未找到所選時段，請重新選擇。' };
-    }
-
-    if (attendeeCount < 1 || attendeeCount > MAX_CAPACITY_PER_SLOT) {
-      return {
-        valid: false,
-        reason: `每時段預約人數限 1 至 ${MAX_CAPACITY_PER_SLOT} 人（可選席位：男A、男B、女A、女B）。`,
-      };
-    }
-
-    if (slotDef.isDirectOnly && employeeType === 'indirect') {
-      const alternatives = this.getAvailableAlternativeSlots(
-        date,
-        employeeType,
-        attendeeCount,
-        slotId
-      );
-      return {
-        valid: false,
-        reason: DIRECT_ONLY_PROMPT_MESSAGE,
-        suggestedSlots: alternatives,
-      };
-    }
-
-    const availableSeats = this.getAvailableSeats(date, slotId);
-    const availableSeatIds = availableSeats.map((s) => s.seatId);
-
-    if (requestedSeats && requestedSeats.length > 0) {
-      if (requestedSeats.length !== attendeeCount) {
-        return {
-          valid: false,
-          reason: `選擇的席位數量（${requestedSeats.length} 席）與預約人數（${attendeeCount} 位）不符。`,
-        };
-      }
-
-      for (const seat of requestedSeats) {
-        if (!availableSeatIds.includes(seat)) {
-          const alternatives = this.getAvailableAlternativeSlots(
-            date,
-            employeeType,
-            attendeeCount,
-            slotId
-          );
-          return {
-            valid: false,
-            reason: `所選席位【${seat}】在此時段已被其他同仁登記，請改選其他席位或其他時段。`,
-            suggestedSlots: alternatives,
-          };
-        }
-      }
-    } else {
-      const remaining = availableSeats.length;
-      if (remaining < attendeeCount) {
-        const alternatives = this.getAvailableAlternativeSlots(
-          date,
-          employeeType,
-          attendeeCount,
-          slotId
-        );
-        return {
-          valid: false,
-          reason:
-            remaining === 0
-              ? `時段 ${slotDef.startTime}-${slotDef.endTime} 目前已額滿（男A、男B、女A、女B 共 4 席已滿席）。`
-              : `時段 ${slotDef.startTime}-${slotDef.endTime} 目前僅剩 ${remaining} 個席位（剩餘：${availableSeatIds.join('、')}），無法容納預約的 ${attendeeCount} 位同仁。`,
-          suggestedSlots: alternatives,
-        };
-      }
-    }
-
-    return { valid: true };
   }
 
   public createBooking(data: {
@@ -415,26 +490,17 @@ class BookingManager {
     seats?: SeatId[];
     companionNames?: string[];
     notes?: string;
-  }): {
-    success: boolean;
-    booking?: Booking;
-    error?: string;
-    suggestedSlots?: { slot: TimeSlotDef; remaining: number; availableSeats: SeatId[] }[];
-  } {
-    const validation = this.validateBooking(
-      data.date,
-      data.slotId,
-      data.employeeType,
-      data.attendeeCount,
-      data.seats
-    );
+  }): { success: boolean; booking?: Booking; error?: string } {
+    const validation = this.validateBooking({
+      date: data.date,
+      slotId: data.slotId,
+      employeeType: data.employeeType,
+      requestedCount: data.attendeeCount,
+      requestedSeats: data.seats,
+    });
 
     if (!validation.valid) {
-      return {
-        success: false,
-        error: validation.reason,
-        suggestedSlots: validation.suggestedSlots,
-      };
+      return { success: false, error: validation.reason };
     }
 
     let finalSeats: SeatId[] = data.seats || [];
@@ -463,6 +529,11 @@ class BookingManager {
     this.bookings.push(newBooking);
     this.saveBookingsToStorage();
 
+    // Persist to Cloud Firestore in background
+    setDoc(doc(db, 'bookings', newBooking.id), newBooking).catch((err) => {
+      console.warn('Firestore booking persist note:', err);
+    });
+
     return {
       success: true,
       booking: newBooking,
@@ -475,6 +546,12 @@ class BookingManager {
 
     this.bookings[index].status = 'cancelled';
     this.saveBookingsToStorage();
+
+    // Sync cancellation to Firestore in background
+    updateDoc(doc(db, 'bookings', bookingId), { status: 'cancelled' }).catch((err) => {
+      console.warn('Firestore booking cancel note:', err);
+    });
+
     return true;
   }
 
@@ -501,26 +578,139 @@ class BookingManager {
     return this.feedbacks.find((f) => f.bookingId === bookingId);
   }
 
-  public createFeedback(data: Omit<ExperienceFeedback, 'id' | 'createdAt'>): ExperienceFeedback {
+  public async createFeedback(
+    data: Omit<ExperienceFeedback, 'id' | 'createdAt'>
+  ): Promise<ExperienceFeedback> {
     const newFeedback: ExperienceFeedback = {
       ...data,
       id: `FBK-${data.date.replace(/-/g, '')}-${Math.floor(100 + Math.random() * 900)}`,
       createdAt: new Date().toISOString(),
     };
 
+    // Save locally
     this.feedbacks.unshift(newFeedback);
     this.saveFeedbacksToStorage();
 
-    // Mark booking as having feedback
+    // Mark booking locally
     if (data.bookingId) {
       const bIdx = this.bookings.findIndex((b) => b.id === data.bookingId);
       if (bIdx !== -1) {
         this.bookings[bIdx].hasFeedback = true;
         this.saveBookingsToStorage();
+        // Update booking in Firestore
+        try {
+          updateDoc(doc(db, 'bookings', data.bookingId), { hasFeedback: true }).catch(() => {});
+        } catch {}
       }
     }
 
+    // 1. Cloud Firestore Sync (Real-time centralized database)
+    try {
+      await setDoc(doc(db, 'feedbacks', newFeedback.id), newFeedback);
+    } catch (err) {
+      console.warn('Firestore feedback write note:', err);
+    }
+
+    // 2. Google Sheets / Webhook Forwarding (if configured)
+    if (this.webhookUrl) {
+      this.sendToWebhook(this.webhookUrl, newFeedback);
+    }
+
     return newFeedback;
+  }
+
+  // Send single feedback row to Google Sheets Webhook / custom URL
+  public sendToWebhook(url: string, feedback: ExperienceFeedback) {
+    if (!url) return;
+    try {
+      // Format payload with human-readable keys for Google Sheets
+      const payload = {
+        action: 'footbath_feedback',
+        id: feedback.id,
+        createdAt: feedback.createdAt,
+        date: feedback.date,
+        slotId: feedback.slotId,
+        seatId: feedback.seatId || '未指定',
+        employeeName: feedback.employeeName,
+        employeeId: feedback.employeeId,
+        department: feedback.department,
+        employeeType: feedback.employeeType === 'direct' ? '現場直接人員' : '辦公間接人員',
+        overallRating: feedback.overallRating,
+        futureSupport:
+          feedback.futureSupport === 'strongly_recommend'
+            ? '非常支持正式常態設置'
+            : feedback.futureSupport === 'recommend'
+            ? '支持常態設置'
+            : '普通/無意見',
+        weeklyFrequency:
+          feedback.weeklyFrequency === '3_plus'
+            ? '每週 3 次以上'
+            : feedback.weeklyFrequency === '1_2_times'
+            ? '每週 1~2 次'
+            : '工作疲憊時偶爾',
+        durationSuitability:
+          feedback.durationSuitability === 'perfect' ? '30分鐘適中' : '其他建議',
+        preferredTimeSlot: feedback.preferredTimeSlot,
+        cleanlinessRating: feedback.cleanlinessRating,
+        drainageConvenience:
+          feedback.drainageConvenience === 'smooth' ? '順暢便利' : '尚可',
+        suppliesSatisfaction: feedback.suppliesSatisfaction,
+        fatigueReliefFeeling:
+          feedback.fatigueReliefFeeling === 'very_effective'
+            ? '非常顯著放鬆'
+            : '輕度放鬆',
+        workBenefit:
+          feedback.workBenefit === 'energy_boost'
+            ? '精神提振'
+            : feedback.workBenefit === 'muscle_relax'
+            ? '下肢肌肉放鬆'
+            : '其他',
+        cleanedUpAndRestored: feedback.cleanedUpAndRestored ? '已自主倒水復原' : '未確認',
+        improvementTags: feedback.improvementTags?.join('、') || '',
+        comments: feedback.comments || '',
+      };
+
+      // Use no-cors mode so Google Apps Script redirects don't block in browsers
+      fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+        mode: 'no-cors',
+      }).catch((e) => {
+        console.warn('Webhook transmission note:', e);
+      });
+    } catch (e) {
+      console.warn('Webhook build error:', e);
+    }
+  }
+
+  // Test webhook connection with sample payload
+  public async testWebhook(url: string): Promise<{ success: boolean; message: string }> {
+    if (!url.trim()) {
+      return { success: false, message: '請先輸入有效的 Webhook 網址' };
+    }
+
+    try {
+      const sample = this.feedbacks[0] || INITIAL_SAMPLE_FEEDBACKS[0];
+      await fetch(url.trim(), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action: 'test_connection',
+          message: '【六樓淋浴間舒活足浴坊】體驗回饋串接測試成功！',
+          timestamp: new Date().toISOString(),
+          sampleFeedback: sample,
+        }),
+        mode: 'no-cors',
+      });
+      return { success: true, message: '已發送測試封包至指定 Webhook 網址！' };
+    } catch (e: any) {
+      return { success: false, message: `發送失敗：${e?.message || '網路異常'}` };
+    }
   }
 
   public resetSampleData() {
@@ -528,6 +718,14 @@ class BookingManager {
     this.feedbacks = [...INITIAL_SAMPLE_FEEDBACKS];
     this.saveBookingsToStorage();
     this.saveFeedbacksToStorage();
+
+    // Overwrite sample to cloud
+    INITIAL_SAMPLE_FEEDBACKS.forEach((fb) => {
+      setDoc(doc(db, 'feedbacks', fb.id), fb).catch(() => {});
+    });
+    INITIAL_SAMPLE_BOOKINGS.forEach((bk) => {
+      setDoc(doc(db, 'bookings', bk.id), bk).catch(() => {});
+    });
   }
 }
 

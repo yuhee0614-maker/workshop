@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { ExperienceFeedback } from '../types';
+import { bookingManager } from '../services/bookingManager';
 import {
   X,
   Star,
@@ -15,7 +16,58 @@ import {
   Tag,
   Building2,
   ThumbsUp,
+  Cloud,
+  Database,
+  Send,
+  Copy,
+  Check,
+  ExternalLink,
+  FileSpreadsheet,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
+
+const APPS_SCRIPT_TEMPLATE = `// 貼到 Google 試算表 > 擴充功能 > Apps Script > 點擊右上角「部署」為「新部署」> 選擇「網頁應用程式」> 存取權選擇「所有人」
+function doPost(e) {
+  try {
+    var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+    if (sheet.getLastRow() === 0) {
+      sheet.appendRow([
+        "填寫時間", "體驗日期", "體驗時段", "席位", "同仁姓名", "工號", "部門",
+        "人員類別", "整體滿意度", "常態設置支持度", "每週使用頻率", "時長評估",
+        "時段偏好", "環境清潔度", "倒水便利度", "耗材滿意度", "疲勞舒緩感",
+        "工作助益", "自主倒水復原", "改善建議標籤", "詳細心得與建言"
+      ]);
+    }
+    var data = JSON.parse(e.postData.contents);
+    sheet.appendRow([
+      data.createdAt || new Date().toISOString(),
+      data.date,
+      data.slotId,
+      data.seatId,
+      data.employeeName,
+      data.employeeId,
+      data.department,
+      data.employeeType,
+      data.overallRating,
+      data.futureSupport,
+      data.weeklyFrequency,
+      data.durationSuitability,
+      data.preferredTimeSlot,
+      data.cleanlinessRating,
+      data.drainageConvenience,
+      data.suppliesSatisfaction,
+      data.fatigueReliefFeeling,
+      data.workBenefit,
+      data.cleanedUpAndRestored,
+      data.improvementTags,
+      data.comments
+    ]);
+    return ContentService.createTextOutput(JSON.stringify({ status: "success" })).setMimeType(ContentService.MimeType.JSON);
+  } catch(err) {
+    return ContentService.createTextOutput(JSON.stringify({ status: "error", message: err.toString() })).setMimeType(ContentService.MimeType.JSON);
+  }
+}`;
 
 interface AdminFeedbackModalProps {
   isOpen: boolean;
@@ -32,6 +84,38 @@ export const AdminFeedbackModal: React.FC<AdminFeedbackModalProps> = ({
   const [supportFilter, setSupportFilter] = useState<'all' | 'strongly_recommend' | 'recommend' | 'other'>('all');
   const [typeFilter, setTypeFilter] = useState<'all' | 'direct' | 'indirect'>('all');
   const [ratingFilter, setRatingFilter] = useState<'all' | '5' | '4' | 'low'>('all');
+
+  // Cloud Sync & Webhook States
+  const [showWebhookPanel, setShowWebhookPanel] = useState(false);
+  const [webhookUrlInput, setWebhookUrlInput] = useState(bookingManager.getWebhookUrl());
+  const [testResult, setTestResult] = useState<string | null>(null);
+  const [isTesting, setIsTesting] = useState(false);
+  const [copiedCode, setCopiedCode] = useState(false);
+  const cloudStatus = bookingManager.getCloudStatus();
+
+  const handleSaveWebhook = () => {
+    bookingManager.setWebhookUrl(webhookUrlInput);
+    setTestResult('已成功儲存 Google 試算表 Webhook 網址！');
+    setTimeout(() => setTestResult(null), 4000);
+  };
+
+  const handleTestWebhook = async () => {
+    if (!webhookUrlInput.trim()) {
+      setTestResult('請先輸入有效的 Webhook 網址');
+      return;
+    }
+    setIsTesting(true);
+    setTestResult(null);
+    const res = await bookingManager.testWebhook(webhookUrlInput);
+    setIsTesting(false);
+    setTestResult(res.message);
+  };
+
+  const handleCopyCode = () => {
+    navigator.clipboard.writeText(APPS_SCRIPT_TEMPLATE);
+    setCopiedCode(true);
+    setTimeout(() => setCopiedCode(false), 3000);
+  };
 
   if (!isOpen) return null;
 
@@ -251,6 +335,120 @@ export const AdminFeedbackModal: React.FC<AdminFeedbackModalProps> = ({
 
         {/* Scrollable Container */}
         <div className="p-6 overflow-y-auto space-y-6 flex-1">
+          {/* Cloud Database & Real-Time Sync Status Banner */}
+          <div className="bg-gradient-to-r from-teal-900 via-neutral-900 to-teal-950 text-white rounded-xl p-4 shadow-sm border border-teal-700/40">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-lg bg-teal-500/20 border border-teal-400/30 flex items-center justify-center shrink-0">
+                  <Database className="w-4 h-4 text-teal-300" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                      雲端資料庫即時同步中 (Firebase Firestore)
+                    </span>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-teal-800/80 text-teal-200 border border-teal-500/40">
+                      跨手機·全員同步
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-teal-100/80 mt-0.5">
+                    已自動串接中央雲端儲存，同仁在六樓淋浴間填寫的 30 分鐘足浴回饋將零時差匯入後台（目前共 {feedbacks.length} 筆紀錄）。
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setShowWebhookPanel(!showWebhookPanel)}
+                  className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-white/10 hover:bg-white/20 text-teal-100 border border-teal-400/30 transition-colors flex items-center gap-1.5 cursor-pointer"
+                >
+                  <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-300" />
+                  <span>Google 試算表串接設定</span>
+                  {showWebhookPanel ? (
+                    <ChevronUp className="w-3.5 h-3.5" />
+                  ) : (
+                    <ChevronDown className="w-3.5 h-3.5" />
+                  )}
+                </button>
+              </div>
+            </div>
+
+            {/* Expandable Google Sheets Webhook Configuration Panel */}
+            {showWebhookPanel && (
+              <div className="mt-4 pt-4 border-t border-teal-800/60 space-y-3.5 text-xs">
+                <div className="p-3 bg-teal-950/80 rounded-lg border border-teal-700/50">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="font-bold text-teal-200 flex items-center gap-1.5">
+                      <FileSpreadsheet className="w-4 h-4 text-emerald-400" />
+                      Google 試算表（Google Sheets）即時寫入串接
+                    </span>
+                    <button
+                      type="button"
+                      onClick={handleCopyCode}
+                      className="px-2.5 py-1 text-[11px] font-semibold bg-teal-700 hover:bg-teal-600 text-white rounded transition-colors flex items-center gap-1 cursor-pointer"
+                    >
+                      {copiedCode ? (
+                        <>
+                          <Check className="w-3 h-3 text-emerald-300" />
+                          <span>已複製代碼！</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="w-3 h-3" />
+                          <span>一鍵複製 Google 試算表接收代碼</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                  <p className="text-[11px] text-neutral-300 leading-relaxed mb-3">
+                    想讓每筆回饋也自動記錄到您的 Google 試算表？只需 2 個步驟：
+                    <br />
+                    1. 打開 Google 試算表 &gt; 點擊「擴充功能」&gt;「Apps Script」&gt; 貼上上方複製的代碼 &gt; 點擊右上角「部署」&gt;「新部署」&gt; 類型選「網頁應用程式」（存取權選「所有人」）。
+                    <br />
+                    2. 將產生的「網頁應用程式網址」貼入下方並點擊「儲存」，同仁送出回饋時就會即時新增一行至試算表！
+                  </p>
+
+                  <div className="flex flex-col sm:flex-row items-center gap-2">
+                    <input
+                      type="url"
+                      placeholder="貼上您的 Google Apps Script Webhook 網址 (https://script.google.com/macros/s/.../exec)"
+                      value={webhookUrlInput}
+                      onChange={(e) => setWebhookUrlInput(e.target.value)}
+                      className="flex-1 w-full bg-neutral-900 border border-teal-600/50 rounded-lg px-3 py-1.5 text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-teal-400"
+                    />
+                    <div className="flex items-center gap-2 w-full sm:w-auto">
+                      <button
+                        type="button"
+                        onClick={handleSaveWebhook}
+                        className="px-3.5 py-1.5 font-semibold text-white bg-teal-600 hover:bg-teal-500 rounded-lg transition-colors cursor-pointer w-full sm:w-auto"
+                      >
+                        儲存網址
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleTestWebhook}
+                        disabled={isTesting}
+                        className="px-3.5 py-1.5 font-semibold text-teal-200 bg-teal-900/80 hover:bg-teal-800 border border-teal-500/40 rounded-lg transition-colors cursor-pointer flex items-center justify-center gap-1 w-full sm:w-auto"
+                      >
+                        <Send className="w-3 h-3 text-teal-300" />
+                        <span>{isTesting ? '測試中...' : '發送測試資料'}</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {testResult && (
+                    <div className="mt-2.5 p-2 bg-teal-900/90 border border-teal-500/60 rounded text-[11px] text-teal-100 flex items-center gap-1.5">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                      <span>{testResult}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
           {/* Top 4 Primary KPI Cards */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div className="p-4 bg-teal-50/70 border border-teal-200 rounded-xl">
