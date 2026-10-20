@@ -71,7 +71,7 @@ export const SlotTimetable: React.FC<SlotTimetableProps> = ({
     if (isFull) {
       setRestrictionAlert({
         slotId: slot.id,
-        message: `時段 ${slot.startTime}-${slot.endTime} 目前已預約額滿（獨立足浴 1~4 號桶已全數滿席）。請選擇其他時段。`,
+        message: `時段 ${slot.startTime}-${slot.endTime} 目前已預約額滿（男A~男C、女A~女C 共 6 席已全數滿席）。請選擇其他時段。`,
       });
       return;
     }
@@ -324,14 +324,14 @@ export const SlotTimetable: React.FC<SlotTimetableProps> = ({
                         : 'text-teal-700'
                     }`}
                   >
-                    {isFull ? '已滿席 (4/4)' : `剩 ${remainingCapacity} 席 (${totalBooked}/${MAX_CAPACITY_PER_SLOT})`}
+                    {isFull ? `已滿席 (${MAX_CAPACITY_PER_SLOT}/${MAX_CAPACITY_PER_SLOT})` : `剩 ${remainingCapacity} 席 (${totalBooked}/${MAX_CAPACITY_PER_SLOT})`}
                   </span>
                 </div>
 
-                {/* 4 Designated Seats Grid: 男A, 男B, 女A, 女B */}
-                <div className="grid grid-cols-2 gap-1.5 mb-3">
+                {/* 6 Designated Seats Grid: 男A, 男B, 男C, 女A, 女B, 女C */}
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 mb-3">
                   {seats.map((seat) => {
-                    const isMale = seat.seatId === '男A' || seat.seatId === '男B';
+                    const isMale = seat.gender === 'male' || seat.seatId.startsWith('男');
                     return (
                       <button
                         key={seat.seatId}
@@ -411,7 +411,7 @@ export const SlotTimetable: React.FC<SlotTimetableProps> = ({
                     disabled
                     className="w-full py-1.5 text-xs font-medium text-neutral-400 bg-neutral-100 rounded-lg cursor-not-allowed text-center"
                   >
-                    時段已滿 (4席全滿)
+                    時段已滿 (6席全滿)
                   </button>
                 ) : (
                   <button
@@ -437,11 +437,11 @@ export const SlotTimetable: React.FC<SlotTimetableProps> = ({
         <div className="flex items-center gap-4 flex-wrap">
           <span className="flex items-center gap-1.5">
             <span className="w-2.5 h-2.5 rounded-sm bg-sky-500 inline-block" />
-            男席 (男A、男B)
+            男席 (男A、男B、男C)
           </span>
           <span className="flex items-center gap-1.5">
             <span className="w-2.5 h-2.5 rounded-sm bg-rose-500 inline-block" />
-            女席 (女A、女B)
+            女席 (女A、女B、女C)
           </span>
           <span className="flex items-center gap-1.5">
             <span className="w-2.5 h-2.5 rounded-sm bg-neutral-300 inline-block" />
@@ -452,7 +452,7 @@ export const SlotTimetable: React.FC<SlotTimetableProps> = ({
             直接人員專屬 (12:00-13:00, 15:00-15:30)
           </span>
         </div>
-        <span>地點：六樓淋浴間 · 每時段 4 席（男A、男B、女A、女B）· 30 分鐘足浴時段（含足浴與自主清潔）</span>
+        <span>地點：六樓淋浴間 · 每時段 6 席（男A、男B、男C、女A、女B、女C）· 30 分鐘足浴時段（含足浴與自主清潔）</span>
       </div>
     </div>
   );

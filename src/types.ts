@@ -1,6 +1,6 @@
 export type EmployeeType = 'direct' | 'indirect';
 
-export type SeatId = '男A' | '男B' | '女A' | '女B';
+export type SeatId = '男A' | '男B' | '男C' | '女A' | '女B' | '女C';
 
 export interface SeatSlotStatus {
   seatId: SeatId;

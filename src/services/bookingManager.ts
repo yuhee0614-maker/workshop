@@ -281,7 +281,7 @@ class BookingManager {
   }
 
   private normalizeBookings(list: any[]): Booking[] {
-    const validSeats: SeatId[] = ['男A', '男B', '女A', '女B'];
+    const validSeats: SeatId[] = ['男A', '男B', '男C', '女A', '女B', '女C'];
     return list.map((b) => {
       let seats: SeatId[] = [];
       if (Array.isArray(b.seats)) {
@@ -289,15 +289,17 @@ class BookingManager {
           .map((s: string) => {
             if (s === '1號桶') return '男A';
             if (s === '2號桶') return '男B';
-            if (s === '3號桶') return '女A';
-            if (s === '4號桶') return '女B';
+            if (s === '3號桶') return '男C';
+            if (s === '4號桶') return '女A';
+            if (s === '5號桶') return '女B';
+            if (s === '6號桶') return '女C';
             return s as SeatId;
           })
           .filter((s: SeatId) => validSeats.includes(s));
       }
 
       if (seats.length === 0) {
-        const count = Math.min(b.attendeeCount || 1, 4);
+        const count = Math.min(b.attendeeCount || 1, MAX_CAPACITY_PER_SLOT);
         seats = validSeats.slice(0, count);
       }
 

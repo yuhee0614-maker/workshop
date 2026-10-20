@@ -108,7 +108,7 @@ export default function App() {
     .filter((b) => b.employeeType === 'indirect')
     .reduce((sum, b) => sum + (b.seats?.length || b.attendeeCount || 0), 0);
 
-  const totalSeats = 40; // 10 slots * 4 seats (男A、男B、女A、女B)
+  const totalSeats = 60; // 10 slots * 6 seats (男A、男B、男C、女A、女B、女C)
   const remainingSeatsToday = Math.max(0, totalSeats - totalBookedPeopleToday);
 
   return (
@@ -153,7 +153,7 @@ export default function App() {
             <span className="text-[11px] text-neutral-500 block">本日已預約席位</span>
             <div className="text-lg font-bold text-neutral-900 tabular-nums">
               {totalBookedPeopleToday}{' '}
-              <span className="text-xs font-normal text-neutral-500">/ 40 席</span>
+              <span className="text-xs font-normal text-neutral-500">/ 60 席</span>
             </div>
           </div>
 
@@ -191,7 +191,7 @@ export default function App() {
                   預約時段
                 </h3>
                 <p className="text-xs text-neutral-500 mt-0.5">
-                  12:00 至 17:00 共 10 個時段 · 每時段 4 席（男A、男B、女A、女B）
+                  12:00 至 17:00 共 10 個時段 · 每時段 6 席（男A、男B、男C、女A、女B、女C）
                 </p>
               </div>
 

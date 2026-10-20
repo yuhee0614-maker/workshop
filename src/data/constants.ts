@@ -1,6 +1,6 @@
 import { TimeSlotDef, Booking, SeatId } from '../types';
 
-export const MAX_CAPACITY_PER_SLOT = 4;
+export const MAX_CAPACITY_PER_SLOT = 6;
 
 export const SLOT_SEAT_DEFS: {
   id: SeatId;
@@ -9,8 +9,10 @@ export const SLOT_SEAT_DEFS: {
 }[] = [
   { id: '男A', label: '男A', gender: 'male' },
   { id: '男B', label: '男B', gender: 'male' },
+  { id: '男C', label: '男C', gender: 'male' },
   { id: '女A', label: '女A', gender: 'female' },
   { id: '女B', label: '女B', gender: 'female' },
+  { id: '女C', label: '女C', gender: 'female' },
 ];
 
 export const DIRECT_ONLY_PROMPT_MESSAGE =

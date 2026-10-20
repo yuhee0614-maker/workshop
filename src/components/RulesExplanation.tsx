@@ -47,7 +47,7 @@ export const RulesExplanation: React.FC = () => {
               </div>
               <ul className="text-xs text-neutral-600 space-y-1.5 leading-relaxed pl-1">
                 <li>• 使用時間為每日 12:00 至 17:00，地點位於六樓淋浴間。</li>
-                <li>• 於即時看板選擇日期、時段與席位（男A、男B、女A、女B）。</li>
+                <li>• 於即時看板選擇日期、時段與席位（男A、男B、男C、女A、女B、女C）。</li>
                 <li>• 請核對身分：12:00~13:00 及 15:00~15:30 為直接人員（現場作業員）專屬時段。</li>
               </ul>
             </div>
@@ -66,8 +66,8 @@ export const RulesExplanation: React.FC = () => {
               </div>
               <ul className="text-xs text-neutral-600 space-y-1.5 leading-relaxed pl-1">
                 <li>• 請準時抵達六樓淋浴間。</li>
-                <li>• 依照預約之席位標示（男A、男B、女A、女B）對應入座。</li>
-                <li>• 每位同仁使用專屬「獨立檜木足浴桶」，享有 30 分鐘完整足浴時段，由同仁自主處理享受與各項足浴事宜。</li>
+                <li>• 依照預約之席位標示（男A、男B、男C、女A、女B、女C）對應入座。</li>
+                <li>• 每位同仁使用專屬「獨立足浴桶」，享有 30 分鐘完整足浴時段，由同仁自主處理享受與各項足浴事宜。</li>
               </ul>
             </div>
           </div>
@@ -105,7 +105,7 @@ export const RulesExplanation: React.FC = () => {
             </p>
           </div>
           <span className="text-xs font-semibold px-2.5 py-1 bg-teal-50 text-teal-800 rounded-md border border-teal-200">
-            全日 10 個時段 · 每時段 4 席
+            全日 10 個時段 · 每時段 6 席
           </span>
         </div>
 
@@ -179,7 +179,7 @@ export const RulesExplanation: React.FC = () => {
                       )}
                     </td>
                     <td className="py-3 px-4 tabular-nums font-semibold">
-                      男A、男B、女A、女B (共 4 席)
+                      男A、男B、男C、女A、女B、女C (共 6 席)
                     </td>
                   </tr>
                 );

@@ -59,6 +59,8 @@ export const BookingModal: React.FC<BookingModalProps> = ({
   const [companion1, setCompanion1] = useState('');
   const [companion2, setCompanion2] = useState('');
   const [companion3, setCompanion3] = useState('');
+  const [companion4, setCompanion4] = useState('');
+  const [companion5, setCompanion5] = useState('');
   const [notes, setNotes] = useState('');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successBooking, setSuccessBooking] = useState<Booking | null>(null);
@@ -190,7 +192,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
     }
 
     if (selectedSeats.length === 0) {
-      setErrorMsg('請至少點選一個預約席位（獨立足浴 1~4 號桶）。');
+      setErrorMsg('請至少點選一個預約席位（男A、男B、男C、女A、女B、女C）。');
       return;
     }
 
@@ -205,6 +207,8 @@ export const BookingModal: React.FC<BookingModalProps> = ({
     if (selectedSeats.length >= 2 && companion1.trim()) companions.push(companion1.trim());
     if (selectedSeats.length >= 3 && companion2.trim()) companions.push(companion2.trim());
     if (selectedSeats.length >= 4 && companion3.trim()) companions.push(companion3.trim());
+    if (selectedSeats.length >= 5 && companion4.trim()) companions.push(companion4.trim());
+    if (selectedSeats.length >= 6 && companion5.trim()) companions.push(companion5.trim());
 
     const result = bookingManager.createBooking({
       date,
@@ -237,7 +241,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
               {successBooking ? '預約成功確認' : '登記舒活足浴預約'}
             </h3>
             <p className="text-xs text-neutral-500 mt-0.5">
-              地點：六樓淋浴間 · 每時段 4 席（男A、男B、女A、女B）· 30 分鐘足浴時段
+              地點：六樓淋浴間 · 每時段 6 席（男A、男B、男C、女A、女B、女C）· 30 分鐘足浴時段
             </p>
           </div>
           <button
@@ -442,7 +446,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                   <div>
                     <p className="font-bold text-rose-900">時段已額滿</p>
                     <p className="mt-0.5">
-                      該時段 4 個席位（男A、男B、女A、女B）已全數預約額滿。
+                      該時段 6 個席位（男A、男B、男C、女A、女B、女C）已全數預約額滿。
                     </p>
                   </div>
                 </div>
@@ -561,7 +565,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                       return (
                         <option key={slot.id} value={slot.id}>
                           {slot.startTime} - {slot.endTime} (
-                          {slot.isDirectOnly ? '直接專屬' : '全體開放'} · 剩 {rem}/4 席)
+                          {slot.isDirectOnly ? '直接專屬' : '全體開放'} · 剩 {rem}/{MAX_CAPACITY_PER_SLOT} 席)
                         </option>
                       );
                     })}
@@ -575,19 +579,19 @@ export const BookingModal: React.FC<BookingModalProps> = ({
               <div className="flex items-center justify-between">
                 <div>
                   <span className="text-xs font-bold text-neutral-900 block">
-                    選擇席位（每時段 4 席：男A、男B、女A、女B） <span className="text-rose-500">*</span>
+                    選擇席位（每時段 6 席：男A、男B、男C、女A、女B、女C） <span className="text-rose-500">*</span>
                   </span>
                   <span className="text-[11px] text-neutral-500">
                     點擊選擇席位（已選擇 {selectedSeats.length} 席）
                   </span>
                 </div>
                 <div className="flex items-center gap-1">
-                  {[1, 2, 3, 4].map((num) => (
+                  {[1, 2, 3, 4, 5, 6].map((num) => (
                     <button
                       key={num}
                       type="button"
                       onClick={() => handleQuickCount(num)}
-                      className="px-2 py-0.5 text-[11px] bg-white border border-neutral-300 rounded hover:bg-neutral-100 font-medium text-neutral-700"
+                      className="px-2 py-0.5 text-[11px] bg-white border border-neutral-300 rounded hover:bg-neutral-100 font-medium text-neutral-700 cursor-pointer"
                     >
                       {num}人
                     </button>
@@ -595,12 +599,12 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                 </div>
               </div>
 
-              {/* 4 Seat Buttons */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              {/* 6 Seat Buttons */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
                 {SLOT_SEAT_DEFS.map((seatDef) => {
                   const isAvailable = availableSeatIds.includes(seatDef.id);
                   const isSelected = selectedSeats.includes(seatDef.id);
-                  const isMale = seatDef.id === '男A' || seatDef.id === '男B';
+                  const isMale = seatDef.gender === 'male' || seatDef.id.startsWith('男');
 
                   return (
                     <button
@@ -712,7 +716,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                   <Users className="w-3.5 h-3.5 text-teal-600" />
                   同行同仁姓名（選填）
                 </span>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
                   <input
                     type="text"
                     placeholder="同行同仁 1 姓名"
@@ -735,6 +739,24 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                       placeholder="同行同仁 3 姓名"
                       value={companion3}
                       onChange={(e) => setCompanion3(e.target.value)}
+                      className="text-xs border border-neutral-200 rounded-md px-3 py-1.5 bg-white"
+                    />
+                  )}
+                  {selectedSeats.length >= 5 && (
+                    <input
+                      type="text"
+                      placeholder="同行同仁 4 姓名"
+                      value={companion4}
+                      onChange={(e) => setCompanion4(e.target.value)}
+                      className="text-xs border border-neutral-200 rounded-md px-3 py-1.5 bg-white"
+                    />
+                  )}
+                  {selectedSeats.length >= 6 && (
+                    <input
+                      type="text"
+                      placeholder="同行同仁 5 姓名"
+                      value={companion5}
+                      onChange={(e) => setCompanion5(e.target.value)}
                       className="text-xs border border-neutral-200 rounded-md px-3 py-1.5 bg-white"
                     />
                   )}

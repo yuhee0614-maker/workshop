@@ -43,7 +43,7 @@ export const WellnessHero: React.FC<WellnessHeroProps> = ({
           <span aria-hidden="true" className="text-teal-400">·</span>
           <span>每日 12:00 - 17:00</span>
           <span aria-hidden="true" className="text-teal-400">·</span>
-          <span className="font-bold text-teal-900">每時段 4 席 (男A、男B、女A、女B)</span>
+          <span className="font-bold text-teal-900">每時段 6 席 (男A、男B、男C、女A、女B、女C)</span>
         </div>
 
         <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight text-stone-900 mb-3 leading-tight">
@@ -52,8 +52,8 @@ export const WellnessHero: React.FC<WellnessHeroProps> = ({
         </h2>
 
         <p className="text-stone-700 text-sm sm:text-base leading-relaxed mb-6 max-w-2xl font-normal">
-          設置於<strong>六樓淋浴間</strong>，配置獨立檜木足浴桶與舒適座椅，提供同仁在 30 分鐘完整時段內自主掌握足浴舒緩與用畢清潔。
-          每時段上限 4 位同仁（設有男A、男B、女A、女B 專屬席位）。
+          設置於<strong>六樓淋浴間</strong>，配置獨立足浴桶與座椅，提供同仁在 30 分鐘完整時段內自主掌握足浴舒緩與用畢清潔。
+          每時段上限 6 位同仁（設有男A、男B、男C、女A、女B、女C 專屬席位）。
         </p>
 
         {/* 3-Step Process Card */}
@@ -70,7 +70,7 @@ export const WellnessHero: React.FC<WellnessHeroProps> = ({
                 <span>線上預約</span>
               </div>
               <p className="text-xs text-stone-600 leading-normal">
-                選擇日期、時段與專屬席位（男A、男B、女A、女B）完成線上登記。
+                選擇日期、時段與專屬席位（男A、男B、男C、女A、女B、女C）完成線上登記。
               </p>
             </div>
 
@@ -138,7 +138,7 @@ export const WellnessHero: React.FC<WellnessHeroProps> = ({
             </span>
             <span className="flex items-center gap-1.5">
               <Users className="w-4 h-4 text-teal-700" />
-              每時段 4 席
+              每時段 6 席
             </span>
           </div>
         </div>

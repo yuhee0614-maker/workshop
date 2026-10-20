@@ -34,7 +34,7 @@ export const Header: React.FC<HeaderProps> = ({
               </span>
             </h1>
             <p className="text-xs text-neutral-500 mt-1 hidden sm:block">
-              地點：六樓淋浴間 · 使用時間 12:00 - 17:00 · 每時段 30 分鐘足浴（男A、男B、女A、女B）
+              地點：六樓淋浴間 · 使用時間 12:00 - 17:00 · 每時段 30 分鐘足浴（男A、男B、男C、女A、女B、女C）
             </p>
           </div>
         </div>
