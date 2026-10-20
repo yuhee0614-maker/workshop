@@ -85,6 +85,7 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
 
   const [submitted, setSubmitted] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     if (booking) {
@@ -101,6 +102,7 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
     }
     setSubmitted(false);
     setErrorMsg(null);
+    setIsSubmitting(false);
   }, [booking, isOpen]);
 
   if (!isOpen) return null;
@@ -112,8 +114,6 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
       setSelectedTags([...selectedTags, tag]);
     }
   };
-
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
