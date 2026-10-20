@@ -19,6 +19,7 @@ import {
   Info,
   CheckSquare,
   MapPin,
+  Heart,
 } from 'lucide-react';
 
 interface BookingModalProps {
@@ -29,6 +30,7 @@ interface BookingModalProps {
   defaultSeat?: SeatId | null;
   defaultEmployeeType?: EmployeeType;
   onBookingSuccess: (booking: Booking) => void;
+  onOpenFeedback?: (booking: Booking) => void;
 }
 
 export const BookingModal: React.FC<BookingModalProps> = ({
@@ -39,6 +41,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
   defaultSeat,
   defaultEmployeeType = 'direct',
   onBookingSuccess,
+  onOpenFeedback,
 }) => {
   const [date, setDate] = useState<string>(
     defaultDate || new Date().toISOString().split('T')[0]
@@ -59,6 +62,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
   const [notes, setNotes] = useState('');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successBooking, setSuccessBooking] = useState<Booking | null>(null);
+  const [countdown, setCountdown] = useState<number | null>(null);
 
   // Sync state when props change
   useEffect(() => {
@@ -80,6 +84,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
 
     setErrorMsg(null);
     setSuccessBooking(null);
+    setCountdown(null);
   }, [defaultDate, defaultSlot, defaultSeat, defaultEmployeeType, isOpen]);
 
   // When slot or date changes, ensure selected seats are still available
@@ -96,6 +101,29 @@ export const BookingModal: React.FC<BookingModalProps> = ({
       setSelectedSeats([]);
     }
   }, [date, slotId]);
+
+  // Auto-prompt feedback after successful booking
+  useEffect(() => {
+    if (!successBooking || !isOpen) {
+      setCountdown(null);
+      return;
+    }
+    setCountdown(8);
+    const timer = setInterval(() => {
+      setCountdown((prev) => {
+        if (prev === null) return null;
+        if (prev <= 1) {
+          clearInterval(timer);
+          onClose();
+          onOpenFeedback?.(successBooking);
+          return null;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [successBooking, isOpen]);
 
   if (!isOpen) return null;
 
@@ -314,12 +342,53 @@ export const BookingModal: React.FC<BookingModalProps> = ({
               </div>
             </div>
 
-            <div className="flex gap-3">
+            {/* Experience Feedback Prompt Card */}
+            <div className="p-4 bg-gradient-to-r from-teal-50 to-emerald-50 border border-teal-200 rounded-xl space-y-2">
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 rounded-lg bg-rose-100 text-rose-600 flex items-center justify-center shrink-0">
+                  <Heart className="w-4 h-4 fill-rose-500 text-rose-500" />
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center justify-between flex-wrap gap-1">
+                    <h5 className="text-xs font-bold text-teal-950">
+                      填寫足浴體驗回饋（常態落地評估）
+                    </h5>
+                    {countdown !== null && (
+                      <span className="text-[11px] font-semibold text-teal-700 bg-teal-100/80 px-2 py-0.5 rounded-full">
+                        {countdown} 秒後自動為您跳出表單
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-[11px] text-teal-800/90 mt-0.5 leading-relaxed">
+                    預約資料已自動帶入！您的回饋為公司未來評估六樓足浴坊常態設置的重要依據。
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-2.5">
               <button
-                onClick={onClose}
-                className="flex-1 py-2.5 text-xs sm:text-sm font-semibold text-white bg-teal-700 hover:bg-teal-800 rounded-lg transition-colors text-center"
+                type="button"
+                onClick={() => {
+                  setCountdown(null);
+                  onClose();
+                  onOpenFeedback?.(successBooking);
+                }}
+                className="flex-1 py-2.5 px-4 text-xs sm:text-sm font-bold text-white bg-teal-700 hover:bg-teal-800 rounded-xl transition-all shadow-xs flex items-center justify-center gap-2 cursor-pointer"
               >
-                關閉並返回看板
+                <Heart className="w-4 h-4 text-rose-300" />
+                <span>立即填寫體驗回饋</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setCountdown(null);
+                  onClose();
+                }}
+                className="py-2.5 px-4 text-xs sm:text-sm font-medium text-neutral-600 hover:text-neutral-900 bg-neutral-100 hover:bg-neutral-200 rounded-xl transition-colors text-center"
+              >
+                稍後再填 / 關閉
               </button>
             </div>
           </div>

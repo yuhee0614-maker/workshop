@@ -20,6 +20,7 @@ import {
   doc,
   setDoc,
   updateDoc,
+  deleteDoc,
   onSnapshot,
   getDocs,
 } from 'firebase/firestore';
@@ -203,11 +204,11 @@ class BookingManager {
       if (storedFb) {
         this.feedbacks = JSON.parse(storedFb);
       } else {
-        this.feedbacks = [...INITIAL_SAMPLE_FEEDBACKS];
+        this.feedbacks = [];
         this.saveFeedbacksToStorage();
       }
     } catch {
-      this.feedbacks = [...INITIAL_SAMPLE_FEEDBACKS];
+      this.feedbacks = [];
     }
   }
 
@@ -221,30 +222,16 @@ class BookingManager {
           this.isCloudConnected = true;
           this.lastCloudSync = new Date();
 
-          if (!snapshot.empty) {
-            const cloudFeedbacks: ExperienceFeedback[] = [];
-            snapshot.forEach((docSnap) => {
-              cloudFeedbacks.push(docSnap.data() as ExperienceFeedback);
-            });
+          const cloudFeedbacks: ExperienceFeedback[] = [];
+          snapshot.forEach((docSnap) => {
+            cloudFeedbacks.push(docSnap.data() as ExperienceFeedback);
+          });
 
-            // Merge cloud feedbacks with any local records
-            const mergedMap = new Map<string, ExperienceFeedback>();
-            // Add local/sample first
-            this.feedbacks.forEach((f) => mergedMap.set(f.id, f));
-            // Cloud items overwrite
-            cloudFeedbacks.forEach((f) => mergedMap.set(f.id, f));
+          this.feedbacks = cloudFeedbacks.sort(
+            (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+          );
 
-            this.feedbacks = Array.from(mergedMap.values()).sort(
-              (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-            );
-
-            this.saveFeedbacksToStorage();
-          } else {
-            // Seed initial feedbacks to Firestore so other devices see them
-            INITIAL_SAMPLE_FEEDBACKS.forEach((fb) => {
-              setDoc(doc(db, 'feedbacks', fb.id), fb).catch(() => {});
-            });
-          }
+          this.saveFeedbacksToStorage();
           this.notifyListeners();
         },
         (error) => {
@@ -713,16 +700,42 @@ class BookingManager {
     }
   }
 
+  // Delete a single feedback document from Firestore and local state
+  public async deleteFeedback(id: string): Promise<boolean> {
+    try {
+      await deleteDoc(doc(db, 'feedbacks', id));
+    } catch (err) {
+      console.warn('Failed to delete feedback from Firestore:', err);
+    }
+    this.feedbacks = this.feedbacks.filter((f) => f.id !== id);
+    this.saveFeedbacksToStorage();
+    this.notifyListeners();
+    return true;
+  }
+
+  // Clear all feedback documents from Firestore and local state
+  public async clearAllFeedbacks(): Promise<boolean> {
+    try {
+      const feedbacksCol = collection(db, 'feedbacks');
+      const snapshot = await getDocs(feedbacksCol);
+      const deletePromises = snapshot.docs.map((docSnap) => deleteDoc(docSnap.ref));
+      await Promise.all(deletePromises);
+    } catch (err) {
+      console.warn('Failed to clear all feedbacks from Firestore:', err);
+    }
+    this.feedbacks = [];
+    this.saveFeedbacksToStorage();
+    this.notifyListeners();
+    return true;
+  }
+
   public resetSampleData() {
     this.bookings = [...INITIAL_SAMPLE_BOOKINGS];
-    this.feedbacks = [...INITIAL_SAMPLE_FEEDBACKS];
+    this.feedbacks = [];
     this.saveBookingsToStorage();
     this.saveFeedbacksToStorage();
 
-    // Overwrite sample to cloud
-    INITIAL_SAMPLE_FEEDBACKS.forEach((fb) => {
-      setDoc(doc(db, 'feedbacks', fb.id), fb).catch(() => {});
-    });
+    // Reset bookings to cloud
     INITIAL_SAMPLE_BOOKINGS.forEach((bk) => {
       setDoc(doc(db, 'bookings', bk.id), bk).catch(() => {});
     });

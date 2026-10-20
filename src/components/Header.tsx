@@ -1,12 +1,12 @@
 import React from 'react';
-import { Calendar, TicketCheck, Sparkles, ClipboardList, Heart, TrendingUp } from 'lucide-react';
+import { TicketCheck, Sparkles, ClipboardList } from 'lucide-react';
 
 interface HeaderProps {
   activeTab: 'timetable' | 'rules';
   setActiveTab: (tab: 'timetable' | 'rules') => void;
   onOpenBooking: () => void;
   onOpenMyBookings: () => void;
-  onOpenFeedback: () => void;
+  onOpenFeedback?: () => void;
   onOpenAdmin?: () => void;
   bookingCount: number;
 }
@@ -16,8 +16,6 @@ export const Header: React.FC<HeaderProps> = ({
   setActiveTab,
   onOpenBooking,
   onOpenMyBookings,
-  onOpenFeedback,
-  onOpenAdmin,
   bookingCount,
 }) => {
   return (
@@ -43,42 +41,26 @@ export const Header: React.FC<HeaderProps> = ({
 
         {/* Zone 2: Navigation Links */}
         <nav className="flex items-center gap-1">
-          <button
-            onClick={() => setActiveTab('timetable')}
-            className={`px-3 py-1.5 text-xs sm:text-sm font-medium rounded-md transition-colors flex items-center gap-1.5 ${
-              activeTab === 'timetable'
-                ? 'bg-neutral-100 text-teal-800 font-semibold'
-                : 'text-neutral-600 hover:text-neutral-900 hover:bg-neutral-50'
-            }`}
-          >
-            <Calendar className="w-4 h-4 text-teal-600" />
-            <span>即時時段看板</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab('rules')}
-            className={`px-3 py-1.5 text-xs sm:text-sm font-medium rounded-md transition-colors flex items-center gap-1.5 ${
-              activeTab === 'rules'
-                ? 'bg-neutral-100 text-teal-800 font-semibold'
-                : 'text-neutral-600 hover:text-neutral-900 hover:bg-neutral-50'
-            }`}
-          >
-            <ClipboardList className="w-4 h-4 text-teal-600" />
-            <span>使用流程與規則</span>
-          </button>
+          {activeTab === 'rules' ? (
+            <button
+              onClick={() => setActiveTab('timetable')}
+              className="px-3 py-1.5 text-xs sm:text-sm font-semibold text-teal-800 bg-teal-50 hover:bg-teal-100 border border-teal-200 rounded-lg transition-colors flex items-center gap-1.5 shadow-2xs"
+            >
+              <span>← 返回預約時段</span>
+            </button>
+          ) : (
+            <button
+              onClick={() => setActiveTab('rules')}
+              className="px-3 py-1.5 text-xs sm:text-sm font-medium rounded-md transition-colors flex items-center gap-1.5 text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100"
+            >
+              <ClipboardList className="w-4 h-4 text-teal-600" />
+              <span>使用流程與規則</span>
+            </button>
+          )}
         </nav>
 
         {/* Zone 3: Primary Actions */}
         <div className="flex items-center gap-2">
-          <button
-            onClick={onOpenFeedback}
-            className="px-2.5 py-2 text-xs sm:text-sm font-medium text-rose-700 bg-rose-50 hover:bg-rose-100 rounded-lg transition-colors flex items-center gap-1.5 border border-rose-200"
-            title="填寫體驗滿意度回饋"
-          >
-            <Heart className="w-4 h-4 text-rose-600" />
-            <span className="hidden md:inline">填寫體驗回饋</span>
-          </button>
-
           <button
             onClick={onOpenMyBookings}
             className="px-3 py-2 text-xs sm:text-sm font-medium text-neutral-700 hover:text-neutral-900 hover:bg-neutral-100 rounded-lg transition-colors flex items-center gap-1.5 border border-neutral-200"

@@ -30,7 +30,7 @@ export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({
       setErrorMsg('');
       onSuccess();
     } else {
-      setErrorMsg('密碼不正確，請重新輸入（管理員密碼：888）');
+      setErrorMsg('密碼不正確，請重新輸入。');
     }
   };
 
@@ -91,7 +91,7 @@ export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({
                 type={showPassword ? 'text' : 'password'}
                 autoFocus
                 required
-                placeholder="請輸入密碼（888）"
+                placeholder="請輸入管理者密碼"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="w-full text-xs border border-neutral-200 rounded-lg pl-9 pr-10 py-2.5 bg-neutral-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-teal-600 focus:border-teal-600"
@@ -110,7 +110,7 @@ export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({
             </div>
             <p className="text-[11px] text-neutral-400 mt-1.5 flex items-center justify-between">
               <span>如忘記密碼請洽系統維護人員</span>
-              <span className="text-neutral-400">管理密碼：888</span>
+              <span className="text-neutral-400">僅限授權管理員</span>
             </p>
           </div>
 

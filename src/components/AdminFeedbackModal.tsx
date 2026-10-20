@@ -25,6 +25,8 @@ import {
   FileSpreadsheet,
   ChevronDown,
   ChevronUp,
+  Trash2,
+  AlertTriangle,
 } from 'lucide-react';
 
 const APPS_SCRIPT_TEMPLATE = `// 貼到 Google 試算表 > 擴充功能 > Apps Script > 點擊右上角「部署」為「新部署」> 選擇「網頁應用程式」> 存取權選擇「所有人」
@@ -115,6 +117,25 @@ export const AdminFeedbackModal: React.FC<AdminFeedbackModalProps> = ({
     navigator.clipboard.writeText(APPS_SCRIPT_TEMPLATE);
     setCopiedCode(true);
     setTimeout(() => setCopiedCode(false), 3000);
+  };
+
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
+  const [showClearAllConfirm, setShowClearAllConfirm] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const handleConfirmDeleteSingle = async () => {
+    if (!deleteTarget) return;
+    setIsDeleting(true);
+    await bookingManager.deleteFeedback(deleteTarget.id);
+    setIsDeleting(false);
+    setDeleteTarget(null);
+  };
+
+  const handleConfirmClearAll = async () => {
+    setIsDeleting(true);
+    await bookingManager.clearAllFeedbacks();
+    setIsDeleting(false);
+    setShowClearAllConfirm(false);
   };
 
   if (!isOpen) return null;
@@ -621,13 +642,26 @@ export const AdminFeedbackModal: React.FC<AdminFeedbackModalProps> = ({
               </div>
             </div>
 
-            <button
-              onClick={handleExportCSV}
-              className="px-3.5 py-1.5 text-xs font-bold text-neutral-800 hover:text-neutral-950 bg-white hover:bg-neutral-50 border border-neutral-300 rounded-lg transition-colors flex items-center justify-center gap-1.5 shrink-0 shadow-2xs"
-            >
-              <Download className="w-3.5 h-3.5 text-teal-700" />
-              <span>匯出常態落地評估 CSV 報表</span>
-            </button>
+            <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+              <button
+                onClick={handleExportCSV}
+                className="px-3.5 py-1.5 text-xs font-bold text-neutral-800 hover:text-neutral-950 bg-white hover:bg-neutral-50 border border-neutral-300 rounded-lg transition-colors flex items-center justify-center gap-1.5 shrink-0 shadow-2xs"
+              >
+                <Download className="w-3.5 h-3.5 text-teal-700" />
+                <span>匯出常態落地評估 CSV 報表</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setShowClearAllConfirm(true)}
+                disabled={feedbacks.length === 0 || isDeleting}
+                className="px-3.5 py-1.5 text-xs font-bold text-rose-700 hover:text-rose-800 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-lg transition-colors flex items-center justify-center gap-1.5 shrink-0 shadow-2xs disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                title="清空全數體驗回饋資料"
+              >
+                <Trash2 className="w-3.5 h-3.5 text-rose-600" />
+                <span>全數刪除回饋</span>
+              </button>
+            </div>
           </div>
 
           {/* Feedback Records Table */}
@@ -644,12 +678,13 @@ export const AdminFeedbackModal: React.FC<AdminFeedbackModalProps> = ({
                     <th className="py-2.5 px-3 whitespace-nowrap">預期每週頻率</th>
                     <th className="py-2.5 px-3 whitespace-nowrap">動線與倒水復原</th>
                     <th className="py-2.5 px-3 min-w-[220px]">改善標籤與同仁建言</th>
+                    <th className="py-2.5 px-3 whitespace-nowrap text-center">操作</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-neutral-200 text-neutral-800">
                   {filtered.length === 0 ? (
                     <tr>
-                      <td colSpan={8} className="py-8 text-center text-neutral-400">
+                      <td colSpan={9} className="py-8 text-center text-neutral-400">
                         查無符合篩選條件的同仁體驗回饋
                       </td>
                     </tr>
@@ -762,6 +797,17 @@ export const AdminFeedbackModal: React.FC<AdminFeedbackModalProps> = ({
                             <span className="text-neutral-400 italic">無額外留言</span>
                           )}
                         </td>
+                        <td className="py-2.5 px-3 whitespace-nowrap text-center">
+                          <button
+                            type="button"
+                            onClick={() => setDeleteTarget({ id: item.id, name: `${item.employeeName} (${item.employeeId})` })}
+                            className="px-2 py-1 text-[11px] font-medium text-rose-700 hover:text-rose-900 bg-rose-50 hover:bg-rose-100 border border-rose-200/80 rounded transition-colors inline-flex items-center gap-1 cursor-pointer"
+                            title="刪除此筆同仁回饋"
+                          >
+                            <Trash2 className="w-3 h-3 text-rose-600" />
+                            <span>刪除</span>
+                          </button>
+                        </td>
                       </tr>
                     ))
                   )}
@@ -778,11 +824,89 @@ export const AdminFeedbackModal: React.FC<AdminFeedbackModalProps> = ({
           </span>
           <button
             onClick={onClose}
-            className="px-4 py-2 text-xs font-semibold text-neutral-700 bg-white border border-neutral-200 hover:bg-neutral-100 rounded-lg transition-colors"
+            className="px-4 py-2 text-xs font-semibold text-neutral-700 bg-white border border-neutral-200 hover:bg-neutral-100 rounded-lg transition-colors cursor-pointer"
           >
             關閉
           </button>
         </div>
+
+        {/* Single Item Delete Confirmation Modal */}
+        {deleteTarget && (
+          <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-neutral-950/60 backdrop-blur-xs">
+            <div className="bg-white rounded-xl max-w-sm w-full p-5 shadow-2xl border border-neutral-200 space-y-4 animate-in fade-in zoom-in-95 duration-100">
+              <div className="flex items-center gap-3 text-rose-600">
+                <div className="w-10 h-10 rounded-full bg-rose-100 flex items-center justify-center shrink-0">
+                  <Trash2 className="w-5 h-5 text-rose-600" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-neutral-900">確定刪除此筆回饋？</h4>
+                  <p className="text-xs text-neutral-500 mt-0.5">{deleteTarget.name}</p>
+                </div>
+              </div>
+              <p className="text-xs text-neutral-600 leading-relaxed">
+                確定要刪除這筆體驗回饋嗎？此動作將同步從 Firebase 雲端資料庫中移除，無法復原。
+              </p>
+              <div className="flex items-center justify-end gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setDeleteTarget(null)}
+                  disabled={isDeleting}
+                  className="px-3.5 py-1.5 text-xs font-medium text-neutral-600 hover:bg-neutral-100 rounded-lg transition-colors cursor-pointer"
+                >
+                  取消
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmDeleteSingle}
+                  disabled={isDeleting}
+                  className="px-3.5 py-1.5 text-xs font-semibold text-white bg-rose-600 hover:bg-rose-700 rounded-lg transition-colors flex items-center gap-1 shadow-2xs cursor-pointer"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>{isDeleting ? '刪除中...' : '確認刪除'}</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Clear All Confirmation Modal */}
+        {showClearAllConfirm && (
+          <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-neutral-950/60 backdrop-blur-xs">
+            <div className="bg-white rounded-xl max-w-sm w-full p-5 shadow-2xl border border-rose-200 space-y-4 animate-in fade-in zoom-in-95 duration-100">
+              <div className="flex items-center gap-3 text-rose-600">
+                <div className="w-10 h-10 rounded-full bg-rose-100 flex items-center justify-center shrink-0">
+                  <AlertTriangle className="w-5 h-5 text-rose-600" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-neutral-900">確認全數清空回饋？</h4>
+                  <p className="text-xs text-rose-600 font-medium mt-0.5">共 {feedbacks.length} 筆回饋紀錄</p>
+                </div>
+              </div>
+              <p className="text-xs text-neutral-600 leading-relaxed">
+                您即將<strong>全數刪除</strong>目前所有同仁的體驗回饋紀錄。此操作將同步清空 Firebase 雲端資料庫中的所有資料，且<strong>無法復原</strong>。
+              </p>
+              <div className="flex items-center justify-end gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setShowClearAllConfirm(false)}
+                  disabled={isDeleting}
+                  className="px-3.5 py-1.5 text-xs font-medium text-neutral-600 hover:bg-neutral-100 rounded-lg transition-colors cursor-pointer"
+                >
+                  取消
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmClearAll}
+                  disabled={isDeleting}
+                  className="px-3.5 py-1.5 text-xs font-semibold text-white bg-rose-600 hover:bg-rose-700 rounded-lg transition-colors flex items-center gap-1 shadow-2xs cursor-pointer"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>{isDeleting ? '清空中...' : '確認全數清空'}</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
