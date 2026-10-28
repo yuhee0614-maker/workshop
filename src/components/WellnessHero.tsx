@@ -107,7 +107,7 @@ export const WellnessHero: React.FC<WellnessHeroProps> = ({
             <p className="leading-relaxed">
               <strong className="text-amber-950 font-bold">【直接人員專屬時段提醒】：</strong>
               <span className="text-amber-900 font-bold bg-amber-200/60 px-1 py-0.5 rounded">12:00~13:00</span> 及{' '}
-              <span className="text-amber-900 font-bold bg-amber-200/60 px-1 py-0.5 rounded">15:00~15:30</span> 為現場作業員、產線同仁優先專屬時段；辦公室/內勤等間接同仁請選擇其他 7 個開放時段。
+              <span className="text-amber-900 font-bold bg-amber-200/60 px-1 py-0.5 rounded">15:30~16:00</span> 為現場作業員、產線同仁優先專屬時段；辦公室/內勤等間接同仁請選擇其他 7 個開放時段。
             </p>
           </div>
         </div>

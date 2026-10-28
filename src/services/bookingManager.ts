@@ -115,7 +115,7 @@ const INITIAL_SAMPLE_FEEDBACKS: ExperienceFeedback[] = [
     id: 'FBK-20261015-004',
     bookingId: 'FB-20261006-004',
     date: new Date().toISOString().split('T')[0],
-    slotId: '15:00-15:30',
+    slotId: '15:30-16:00',
     seatId: '女B',
     employeeName: '林雅慧',
     employeeId: 'D1120',
@@ -135,7 +135,7 @@ const INITIAL_SAMPLE_FEEDBACKS: ExperienceFeedback[] = [
     cleanedUpAndRestored: true,
     improvementTags: ['維持直接人員專屬時段保護'],
     comments:
-      '15:00 這個下午中場專屬時段對現場同仁幫助極大，泡完回去站產線到下班腳都不會痠麻，絕對支持公司正式常態落地設置！',
+      '15:30 這個下午中場專屬時段對現場同仁幫助極大，泡完回去站產線到下班腳都不會痠麻，絕對支持公司正式常態落地設置！',
     createdAt: '2026-10-15T15:35:00Z',
   },
 ];

@@ -16,7 +16,7 @@ export const SLOT_SEAT_DEFS: {
 ];
 
 export const DIRECT_ONLY_PROMPT_MESSAGE =
-  '12:00~13:00 及 15:00~15:30 為直接人員優先預約時段，請選擇其他開放時段，謝謝！';
+  '12:00~13:00 及 15:30~16:00 為直接人員優先預約時段，請選擇其他開放時段，謝謝！';
 
 export const TIME_SLOTS: TimeSlotDef[] = [
   {
@@ -65,15 +65,15 @@ export const TIME_SLOTS: TimeSlotDef[] = [
     id: '15:00-15:30',
     startTime: '15:00',
     endTime: '15:30',
-    isDirectOnly: true,
-    label: '15:00 - 15:30 (直接人員專屬)',
+    isDirectOnly: false,
+    label: '15:00 - 15:30 (全體同仁開放)',
   },
   {
     id: '15:30-16:00',
     startTime: '15:30',
     endTime: '16:00',
-    isDirectOnly: false,
-    label: '15:30 - 16:00 (全體同仁開放)',
+    isDirectOnly: true,
+    label: '15:30 - 16:00 (直接人員專屬)',
   },
   {
     id: '16:00-16:30',
@@ -139,7 +139,7 @@ export const INITIAL_SAMPLE_BOOKINGS: Booking[] = [
   {
     id: 'FB-20261006-004',
     date: new Date().toISOString().split('T')[0],
-    slotId: '15:00-15:30',
+    slotId: '15:30-16:00',
     employeeName: '周世傑',
     employeeId: 'D1104',
     department: '品管處 現場檢驗組',

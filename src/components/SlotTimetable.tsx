@@ -449,7 +449,7 @@ export const SlotTimetable: React.FC<SlotTimetableProps> = ({
           </span>
           <span className="flex items-center gap-1.5">
             <span className="w-2.5 h-2.5 rounded-full bg-teal-600 inline-block" />
-            直接人員專屬 (12:00-13:00, 15:00-15:30)
+            直接人員專屬 (12:00-13:00, 15:30-16:00)
           </span>
         </div>
         <span>地點：六樓淋浴間 · 每時段 6 席（男A、男B、男C、女A、女B、女C）· 30 分鐘足浴時段（含足浴與自主清潔）</span>

@@ -48,7 +48,7 @@ export const RulesExplanation: React.FC = () => {
               <ul className="text-xs text-neutral-600 space-y-1.5 leading-relaxed pl-1">
                 <li>• 使用時間為每日 12:00 至 17:00，地點位於六樓淋浴間。</li>
                 <li>• 於即時看板選擇日期、時段與席位（男A、男B、男C、女A、女B、女C）。</li>
-                <li>• 請核對身分：12:00~13:00 及 15:00~15:30 為直接人員（現場作業員）專屬時段。</li>
+                <li>• 請核對身分：12:00~13:00 及 15:30~16:00 為直接人員（現場作業員）專屬時段。</li>
               </ul>
             </div>
           </div>
